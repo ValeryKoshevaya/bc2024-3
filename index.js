@@ -1,65 +1,45 @@
-// index.js
+const fs = require('fs'); // Модуль для роботи з файловою системою
+const path = require('path'); // Модуль для роботи з файлами
+const { Command } = require('commander'); // Модуль для обробки командного рядка
 
-const fs = require('fs');
-const path = require('path');
-const { program } = require('commander');
+const program = new Command();
 
-// Функція для перевірки існування файлу
-const checkFileExists = (filePath) => {
-    return fs.existsSync(filePath);
-};
-
-// Обробка аргументів командного рядка
 program
-    .requiredOption('-i, --input <path>', 'шлях до файлу для читання (JSON)')
-    .option('-o, --output <path>', 'шлях до файлу для запису результату')
-    .option('-d, --display', 'вивести результат у консоль');
+  .option('-i, --input <path>', 'шлях до файлу для читання')
+  .option('-o, --output <path>', 'шлях до файлу для запису результату')
+  .option('-d, --display', 'вивести результат у консоль');
 
 program.parse(process.argv);
 
-// Отримуємо значення параметрів
 const options = program.opts();
 
-// Перевірка наявності обов'язкового параметра
 if (!options.input) {
-    console.error("Please, specify input file");
-    process.exit(1);
+  console.error('Please, specify input file');
+  process.exit(1);
 }
 
-// Перевірка, чи існує файл
-const inputFilePath = path.resolve(options.input);
-if (!checkFileExists(inputFilePath)) {
-    console.error("Cannot find input file");
-    process.exit(1);
+if (!fs.existsSync(options.input)) {
+  console.error('Cannot find input file');
+  process.exit(1);
 }
 
-// Читання даних з JSON файлу
-let jsonData;
 try {
-    const rawData = fs.readFileSync(inputFilePath);
-    jsonData = JSON.parse(rawData);
-} catch (error) {
-    console.error("Error reading or parsing input file:", error.message);
-    process.exit(1);
-}
+  const data = fs.readFileSync(options.input, 'utf-8');
+  const jsonData = JSON.parse(data);
+  
+  const rates = jsonData.map(item => item.rate);
+  const maxRate = Math.max(...rates);
 
-// Логіка для отримання максимального курсу
-let maxRate = -Infinity;
-for (const currency of jsonData) {
-    const rate = parseFloat(currency.rate);
-    if (rate > maxRate) {
-        maxRate = rate;
-    }
-}
+  const result = `Максимальний курс: ${maxRate}`;
 
-// Форматування результату
-const result = `Максимальний курс: ${maxRate}`;
-
-// Виведення результату у консоль або запис у файл
-if (options.display) {
+  if (options.display) {
     console.log(result);
-}
+  }
 
-if (options.output) {
-    fs.writeFileSync(options.output, result);
+  if (options.output) {
+    fs.writeFileSync(options.output, result, 'utf-8');
+  }
+
+} catch (error) {
+  console.error('Error reading or processing the file:', error);
 }
